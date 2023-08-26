@@ -1,9 +1,8 @@
-import dis
 import pygame as pg
-import random
 import math
 import neat
 import os
+import pickle
 
 
 
@@ -48,13 +47,11 @@ class Car:
 
 	def move(self):
 		pressed_keys = pg.key.get_pressed()
-
-		if pressed_keys[pg.K_UP] and self.speed != 0 or self.output[0] < -0.75 and self.speed != 0:
-			self.speed -= 0.14
 		self.speed -= 0.03
-		if pressed_keys[pg.K_DOWN] and self.speed != 0 or self.output[0] > 0.75 and self.speed != 0:
-			self.speed += 0.14
 
+		self.speed -= abs(self.output[0]) / 10
+		
+		
 		if pressed_keys[pg.K_LEFT] and self.speed != 0 or self.output[1] > 0 and self.speed != 0:
 			self.turn_vel += (0.53 * abs(self.speed)) / abs(self.speed)
 		
@@ -80,11 +77,10 @@ class Car:
 
 		self.distance += abs(self.speed)
 
-
 	def draw(self, screen, clock):
 		screen.blit(IMG_map,(0, 0))
 		font = pg.font.Font(None, 30)
-		score_label = font.render("Gen(s): " + str(generation-1),1,(255,255,255))
+		score_label = font.render("Generation: " + str(generation-1),1,(255,255,255))
 		screen.blit(score_label, (10, 10))
 		font = pg.font.Font(None, 30)
 		fps = str(int(clock.get_fps()))
@@ -100,7 +96,7 @@ class Car:
 	
 
 	def draw_raycast(self, screen):
-		# Optionally Draw All Sensors / raycasts
+		# Optionally Draw All raycasts
 		for raycast in self.raycasts:
 			position = raycast[0]
 			pg.draw.line(screen, (0, 255, 0), (self.pos.x, self.pos.y), position, 1)
@@ -126,7 +122,7 @@ class Car:
 	def get_data(self):
 		return_values = [0] * len(self.raycasts)
 		for i, raycast in enumerate(self.raycasts):
-			return_values[i] = int(raycast[1] / 40)
+			return_values[i] = int(raycast[1] / 50)
 
 		return return_values
 	
@@ -161,15 +157,18 @@ def eval_genomes(genomes, config):
 			if car.collision() != None:
 				break
 
-			timer += 1
+			
 			if car.vel.x == 0:
 				timer += 200
 
+			timer += 1
 			if timer > 3000: # after certain time, enough for 2 laps about 30 seconds
 				break	
 			
 			car.move()
-			angles_to_check = [0, 30, 60, 80, 90, 100, 120, 150, 180]
+			angles_to_check = [0, 50, 70, 83, 90, 97, 110, 130, 180]
+
+
 
 			for d in angles_to_check:
 				car.check_raycast(d)
@@ -179,13 +178,17 @@ def eval_genomes(genomes, config):
 
 			genome.fitness += car.distance / 10000
 
+			genome.fitness += car.output[0] / 50
+
+
 
 			
 			if view:
-				screen.fill((0, 0, 0))
+				screen.fill((0, 0, 0)) 
 				clock.tick(FPS)
 				car.draw(screen, clock)
 				car.draw_raycast(screen)
+				print(car.output)
 
 				pg.display.update()
 			car.raycasts.clear()
@@ -209,7 +212,15 @@ def run(config_file):
 	p.add_reporter(stats)
 
 	# Run NEAT algorithm for up to 2000 generations
-	winner = p.run(eval_genomes, 2000)
+	num_generations = 5000
+	
+	for i in range(num_generations):
+		# Run NEAT algorithm for 1 generation
+		winner = p.run(eval_genomes, 1)
+
+		# Save the winner genome using pickle
+		with open(f'winner_genome_{i}.pkl', 'wb') as f:
+			pickle.dump(winner, f)
 
 if __name__ == "__main__":
 	# Set path to NEAT configuration file
