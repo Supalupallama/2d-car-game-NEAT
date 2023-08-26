@@ -1,6 +1,4 @@
-import dis
 import pygame as pg
-import random
 import math
 import neat
 import os
@@ -34,7 +32,7 @@ class Car:
 		self.pos = pg.Vector2(1000, 320)
 		self.vel = pg.Vector2(0, 0)
 		self.turn_vel = 0
-		self.angle = 90
+		self.angle = 90 
 		self.speed = 0
 		self.rotated_rect = IMG.get_rect()
 		self.rotated_rect.center = self.pos
@@ -49,12 +47,15 @@ class Car:
 
 	def move(self):
 		pressed_keys = pg.key.get_pressed()
-
-		if pressed_keys[pg.K_UP] and self.speed != 0 or self.output[0] < -0.8 and self.speed != 0:
-			self.speed -= 0.10   # 0.14
 		self.speed -= 0.03
-		if pressed_keys[pg.K_DOWN] and self.speed != 0 or self.output[0] > 0.95 and self.speed != 0:
-			self.speed += 0.0001
+
+		self.speed -= abs(self.output[0]) / 10
+		
+		if pressed_keys[pg.K_UP]:
+			self.speed -= 0.08   # 0.14
+
+		if pressed_keys[pg.K_DOWN]:
+			self.speed += 0.08
 
 		if pressed_keys[pg.K_LEFT] and self.speed != 0 or self.output[1] > 0 and self.speed != 0:
 			self.turn_vel += (0.53 * abs(self.speed)) / abs(self.speed)
@@ -80,6 +81,7 @@ class Car:
 		self.rotated_rect = self.rotated_image.get_rect(center = self.rotated_rect.center)
 
 		self.distance += abs(self.speed)
+
 
 
 	def draw(self, screen, clock):
@@ -127,13 +129,12 @@ class Car:
 	def get_data(self):
 		return_values = [0] * len(self.raycasts)
 		for i, raycast in enumerate(self.raycasts):
-			return_values[i] = int(raycast[1] / 40)
+			return_values[i] = int(raycast[1] / 50)
 
 		return return_values
 	
 
 def test_ai(genome, config):
-	view = False
 	global generation
 	generation += 1
 
@@ -154,8 +155,7 @@ def test_ai(genome, config):
 				car = Car()
 
 			if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
-				view = not view
-				print(view)
+				print(car.output[0])
 
 		if car.collision() != None:
 			break
@@ -173,14 +173,13 @@ def test_ai(genome, config):
 		genome.fitness += car.distance / 10000
 
 
-		
-		if view:
-			screen.fill((0, 0, 0))
-			clock.tick(FPS)  
-			car.draw(screen, clock)
-			car.draw_raycast(screen)
+	
+		screen.fill((0, 0, 0))
+		clock.tick(FPS)  
+		car.draw(screen, clock)
+		car.draw_raycast(screen)
 
-			pg.display.update()
+		pg.display.update()
 		car.raycasts.clear()
 		
 		
@@ -191,7 +190,7 @@ def run(config_file):
 	config = neat.config.Config(neat.DefaultGenome, neat.DefaultReproduction,
 								neat.DefaultSpeciesSet, neat.DefaultStagnation, 
 								config_file)
-	with open("2winner_genome_220.pkl", "rb") as f: 
+	with open("winner_genome_1111.pkl", "rb") as f: 
 		winner = pickle.load(f)
 	test_ai(winner, config)
 	# Load NEAT configuration
